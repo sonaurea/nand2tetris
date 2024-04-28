@@ -27,19 +27,45 @@
 // if (no == 1) sets out = !out   // bitwise not
 
 CHIP ALU {
-    IN  
-        x[16], y[16],  // 16-bit inputs        
-        zx, // zero the x input?
-        nx, // negate the x input?
-        zy, // zero the y input?
-        ny, // negate the y input?
-        f,  // compute (out = x + y) or (out = x & y)?
-        no; // negate the out output?
-    OUT 
-        out[16], // 16-bit output
-        zr,      // if (out == 0) equals 1, else 0
-        ng;      // if (out < 0)  equals 1, else 0
+  IN  
+    x[16], y[16],  // 16-bit inputs        
+    zx, // zero the x input?
+    nx, // negate the x input?
+    zy, // zero the y input?
+    ny, // negate the y input?
+    f,  // compute (out = x + y) or (out = x & y)?
+    no; // negate the out output?
+  OUT 
+    out[16], // 16-bit output
+    zr,      // if (out == 0) equals 1, else 0
+    ng;      // if (out < 0)  equals 1, else 0
 
-    PARTS:
-    //// Replace this comment with your code.
+  PARTS:
+    // ALU implementation
+    // Filter X
+    Mux16(a=x, sel=zx, out=zedX);
+    Not16(in=zedX, out=negX);
+    Mux16(a=zedX, b=negX, sel=nx, out=filteredX);
+    
+    // Filter Y
+    Mux16(a=y, sel=zy, out=zedY);
+    Not16(in=zedY, out=negY);
+    Mux16(a=zedY, b=negY, sel=ny, out=filteredY);
+
+    // Compute
+    Add16(a=filteredX, b=filteredY, out=added); // Added
+    And16(a=filteredX, b=filteredY, out=anded); // And
+    Mux16(a=anded, b=added, sel=f, out=result);
+
+    Not16(in=result, out=negResult);  // Invert
+    Mux16(a=result, b=negResult, sel=no, out=out, out[0]=msb, out[8..15]=lowerRes, out[0..7]=upperRes);
+
+    // Find NG MSB
+    And(a=msb, b=true, out=ng);
+    
+    // Find ZERO
+    Or8Way(in=lowerRes, out=lowerOr);
+    Or8Way(in=upperRes, out=upperOr);
+    Or(a=lowerOr, b=upperOr, out=orRes);
+    Not(in=orRes, out=zr);
 }

@@ -7,9 +7,10 @@
  * out = in + 1
  */
 CHIP Inc16 {
-    IN in[16];
-    OUT out[16];
+  IN in[16];
+  OUT out[16];
 
-    PARTS:
-    //// Replace this comment with your code.
+  PARTS:
+    // 16 bit Incrementer
+    Add16(a=in, b[0]=true, out=out);
 }
