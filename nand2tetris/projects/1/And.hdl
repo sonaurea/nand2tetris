@@ -7,9 +7,11 @@
  * if (a and b) out = 1, else out = 0 
  */
 CHIP And {
-    IN a, b;
-    OUT out;
-    
-    PARTS:
-    //// Replace this comment with your code.
+  IN a, b;
+  OUT out;
+
+  PARTS:
+    // Inverts the Nand output !(!(a && b))
+    Nand(a=a,b=b,out=nandOut);
+    Nand(a=nandOut,b=nandOut,out=out);
 }

@@ -7,9 +7,12 @@
  * if (a or b) out = 1, else out = 0 
  */
 CHIP Or {
-    IN a, b;
-    OUT out;
+  IN a, b;
+  OUT out;
 
-    PARTS:
-    //// Replace this comment with your code.
+  PARTS:
+    // Implements OR functionality using NAND: ~(~a && ~b);
+    Nand(a=a, b=a, out=notA);
+    Nand(a=b, b=b, out=notB);
+    Nand(a=notA, b=notB, out=out);
 }

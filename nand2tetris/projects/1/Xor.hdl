@@ -7,9 +7,16 @@
  * if ((a and Not(b)) or (Not(a) and b)) out = 1, else out = 0
  */
 CHIP Xor {
-    IN a, b;
-    OUT out;
+  IN a, b;
+  OUT out;
 
-    PARTS:
-    //// Replace this comment with your code.
+  PARTS:
+    // Implements xor using only NAND:
+    //  (a and !b) or (!a and b)
+    //  !(!(a and !b) && !(!a and b))
+    Nand(a=b, b=b, out=nB);
+    Nand(a=a, b=a, out=nA);
+    Nand(a=a, b=nB, out=nAandNB);
+    Nand(a=nA, b=b, out=nNAandB);
+    Nand(a=nAandNB, b=nNAandB, out=out);
 }

@@ -10,9 +10,16 @@
  *                [0, 0, 0, in] if sel = 11
  */
 CHIP DMux4Way {
-    IN in, sel[2];
-    OUT a, b, c, d;
+  IN in, sel[2];
+  OUT a, b, c, d;
 
-    PARTS:
-    //// Replace this comment with your code.
+  PARTS:
+  // 4 Way - DMux
+  DMux(in=in, sel=sel[0], a=dMuxOutA, b=dMuxOutB);
+  DMux(in=in, sel=sel[0], a=dMuxOutC, b=dMuxOutD);
+  Not(in=sel[1], out=nSel1);
+  And(a=nSel1, b=dMuxOutA, out=a);
+  And(a=nSel1, b=dMuxOutB, out=b);
+  And(a=sel[1], b=dMuxOutC, out=c);
+  And(a=sel[1], b=dMuxOutD, out=d);
 }

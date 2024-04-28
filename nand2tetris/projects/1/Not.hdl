@@ -7,9 +7,10 @@
  * if (in) out = 0, else out = 1
  */
 CHIP Not {
-    IN in;
-    OUT out;
+  IN in;
+  OUT out;
 
-    PARTS:
-    //// Replace this comment with your code.
+  PARTS:
+    // Inverts the input signal: !(in && in) = out
+    Nand(a=in, b=in, out=out);
 }

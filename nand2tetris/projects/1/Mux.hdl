@@ -7,9 +7,14 @@
  * if (sel = 0) out = a, else out = b
  */
 CHIP Mux {
-    IN a, b, sel;
-    OUT out;
+  IN a, b, sel;
+  OUT out;
 
-    PARTS:
-    //// Replace this comment with your code.
+  PARTS:
+    // Implements Mux using NAND
+    // !(!(!sel && a) && !(sel && b));
+    Nand(a=sel, b=sel, out=nSel);
+    Nand(a=nSel, b=a, out=nNSelAndA);
+    Nand(a=sel, b=b, out=nSelAndB);
+    Nand(a=nNSelAndA, b=nSelAndB, out=out);
 }
