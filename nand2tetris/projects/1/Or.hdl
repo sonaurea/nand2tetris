@@ -11,8 +11,8 @@ CHIP Or {
   OUT out;
 
   PARTS:
-    // Implements OR functionality using NAND: ~(~a && ~b);
-    Nand(a=a, b=a, out=notA);
-    Nand(a=b, b=b, out=notB);
-    Nand(a=notA, b=notB, out=out);
+    // Implements OR functionality using NAND: !(!a & !b);
+    Not(in=a, out=nA);
+    Not(in=b, out=nB);
+    Nand(a=nA, b=nB, out=out);
 }

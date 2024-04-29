@@ -19,15 +19,11 @@ CHIP DMux8Way {
 
   PARTS:
   // 8way DMux
-  DMux4Way(in=in, sel=sel[0..1], a=dMuxAOut, b=dMuxBOut, 
-          c=dMuxCOut, d=dMuxDOut);
-  Not(in=sel[2], out=nSel2);
-  And(a=dMuxAOut, b=nSel2, out=a);
-  And(a=dMuxBOut, b=nSel2, out=b);
-  And(a=dMuxCOut, b=nSel2, out=c);
-  And(a=dMuxDOut, b=nSel2, out=d);
-  And(a=dMuxAOut, b=sel[2], out=e);
-  And(a=dMuxBOut, b=sel[2], out=f);
-  And(a=dMuxCOut, b=sel[2], out=g);
-  And(a=dMuxDOut, b=sel[2], out=h);
+  DMux(in=in, sel=sel[2], a=dMuxAOut, b=dMuxBOut);
+  DMux4Way(in=dMuxAOut, sel=sel[0..1], 
+    a=a, b=b, 
+    c=c, d=d);
+  DMux4Way(in=dMuxBOut, sel=sel[0..1],
+    a=e, b=f, 
+    c=g, d=h);
 }

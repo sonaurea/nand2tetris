@@ -9,9 +9,8 @@
 CHIP And {
   IN a, b;
   OUT out;
-
   PARTS:
     // Inverts the Nand output !(!(a && b))
     Nand(a=a,b=b,out=nandOut);
-    Nand(a=nandOut,b=nandOut,out=out);
+    Not(in=nandOut,out=out);
 }

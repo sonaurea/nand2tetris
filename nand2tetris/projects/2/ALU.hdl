@@ -33,7 +33,7 @@ CHIP ALU {
     nx, // negate the x input?
     zy, // zero the y input?
     ny, // negate the y input?
-    f,  // compute (out = x + y) or (out = x & y)?
+    f,  // compute (out = x & y) or (out = x + y)?
     no; // negate the out output?
   OUT 
     out[16], // 16-bit output
@@ -53,8 +53,8 @@ CHIP ALU {
     Mux16(a=zedY, b=negY, sel=ny, out=filteredY);
 
     // Compute
+    And16(a=filteredX, b=filteredY, out=anded); // Anded
     Add16(a=filteredX, b=filteredY, out=added); // Added
-    And16(a=filteredX, b=filteredY, out=anded); // And
     Mux16(a=anded, b=added, sel=f, out=result);
 
     Not16(in=result, out=negResult);  // Invert

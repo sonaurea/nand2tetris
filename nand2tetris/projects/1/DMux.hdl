@@ -17,11 +17,9 @@ CHIP DMux {
     *  [a, b] = [in, 0] if sel = 0
     *  [0, in] if sel = 1
     */
-    // a = !!(!sel && in);
-    // b = !!(sel && in);
-    Nand(a=sel, b=sel, out=nSel);
-    Nand(a=nSel, b=in, out=nNSelAndIn);
-    Nand(a=nNSelAndIn, b=nNSelAndIn, out=a);
-    Nand(a=sel, b=in, out=nSelAndIn);
-    Nand(a=nSelAndIn, b=nSelAndIn, out=b);
+    // a = !sel && in;
+    // b = sel && in;
+    Not(in=sel, out=nSel);
+    And(a=nSel, b=in, out=a);
+    And(a=sel, b=in, out=b);
 }

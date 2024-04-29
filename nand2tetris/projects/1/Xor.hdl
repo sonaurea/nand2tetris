@@ -13,10 +13,9 @@ CHIP Xor {
   PARTS:
     // Implements xor using only NAND:
     //  (a and !b) or (!a and b)
-    //  !(!(a and !b) && !(!a and b))
-    Nand(a=b, b=b, out=nB);
-    Nand(a=a, b=a, out=nA);
-    Nand(a=a, b=nB, out=nAandNB);
-    Nand(a=nA, b=b, out=nNAandB);
-    Nand(a=nAandNB, b=nNAandB, out=out);
+    Not(in=b, out=nB);
+    Not(in=a, out=nA);
+    And(a=a, b=nB, out=nAandNB);
+    And(a=nA, b=b, out=nNAandB);
+    Or(a=nAandNB, b=nNAandB, out=out);
 }

@@ -12,9 +12,9 @@ CHIP Mux {
 
   PARTS:
     // Implements Mux using NAND
-    // !(!(!sel && a) && !(sel && b));
-    Nand(a=sel, b=sel, out=nSel);
-    Nand(a=nSel, b=a, out=nNSelAndA);
-    Nand(a=sel, b=b, out=nSelAndB);
-    Nand(a=nNSelAndA, b=nSelAndB, out=out);
+    // (!sel && a) || (sel && b)
+    Not(in=sel, out=nSel);
+    And(a=nSel, b=a, out=nSelAndA);
+    And(a=sel, b=b, out=selAndB);
+    Or(a=nSelAndA, b=selAndB, out=out);
 }
