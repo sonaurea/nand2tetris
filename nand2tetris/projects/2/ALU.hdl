@@ -58,7 +58,8 @@ CHIP ALU {
     Mux16(a=anded, b=added, sel=f, out=result);
 
     Not16(in=result, out=negResult);  // Invert
-    Mux16(a=result, b=negResult, sel=no, out=out, out[15]=msb, out[8..15]=lowerRes, out[0..7]=upperRes);
+    Mux16(a=result, b=negResult, sel=no, out=out, 
+      out[15]=msb, out[8..15]=upperRes, out[0..7]=lowerRes);
 
     // Find NG MSB
     And(a=msb, b=true, out=ng);
