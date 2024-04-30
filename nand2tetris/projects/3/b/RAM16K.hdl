@@ -9,9 +9,17 @@
  * The value of the selected register is emitted by out.
  */
 CHIP RAM16K {
-    IN in[16], load, address[14];
-    OUT out[16];
+  IN in[16], load, address[14];
+  OUT out[16];
 
-    PARTS:
-    //// Replace this comment with your code.
+  PARTS:
+    // RAM - 16 bit word size; 4096 (2^12) Addresses
+    DMux4Way(in=load, sel=address[12..13], 
+      a=ao, b=bo, c=co, d=do);
+    RAM4K(in=in, load=ao, address=address[0..11], out=w0);
+    RAM4K(in=in, load=bo, address=address[0..11], out=w1);
+    RAM4K(in=in, load=co, address=address[0..11], out=w2);
+    RAM4K(in=in, load=do, address=address[0..11], out=w3);
+    Mux4Way16(sel=address[12..13], out=out,
+      a=w0, b=w1, c=w2, d=w3);
 }

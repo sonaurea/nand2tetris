@@ -9,9 +9,23 @@
  * The value of the selected register is emitted by out.
  */
 CHIP RAM8 {
-    IN in[16], load, address[3];
-    OUT out[16];
+  IN in[16], load, address[3];
+  OUT out[16];
 
-    PARTS:
-    //// Replace this comment with your code.
+  PARTS:
+    // Random Access Memory - 16 bit word size, 8 (2^3) Addresses
+    DMux8Way(in=load, sel=address, 
+      a=ao, b=bo, c=co, d=do,
+      e=eo, f=fo, g=go, h=ho);
+    Register(in=in, load=ao, out=b0);
+    Register(in=in, load=bo, out=b1);
+    Register(in=in, load=co, out=b2);
+    Register(in=in, load=do, out=b3);
+    Register(in=in, load=eo, out=b4);
+    Register(in=in, load=fo, out=b5);
+    Register(in=in, load=go, out=b6);
+    Register(in=in, load=ho, out=b7);
+    Mux8Way16(out=out, sel=address, 
+      a=b0, b=b1, c=b2, d=b3,
+      e=b4, f=b5, g=b6, h=b7);
 }
