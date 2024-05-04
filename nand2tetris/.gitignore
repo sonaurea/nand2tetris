@@ -1,1 +1,2 @@
-**/*.dat
+# Cache files
+tools/bin/*.dat
