@@ -19,18 +19,54 @@
  * their new values only in the next cycle.
  */
 CHIP CPU {
+  IN  inM[16],        // M value input  (M = contents of RAM[A])
+      instruction[16],// Instruction for execution
+      reset;          // Signals whether to re-start the current
+                      // program (reset==1) or continue executing
+                      // the current program (reset==0).
 
-    IN  inM[16],         // M value input  (M = contents of RAM[A])
-        instruction[16], // Instruction for execution
-        reset;           // Signals whether to re-start the current
-                         // program (reset==1) or continue executing
-                         // the current program (reset==0).
+  OUT outM[16],       // M value output
+      writeM,         // Write to M? 
+      addressM[15],   // Address in data memory (of M)
+      pc[15];         // address of next instruction
 
-    OUT outM[16],        // M value output
-        writeM,          // Write to M? 
-        addressM[15],    // Address in data memory (of M)
-        pc[15];          // address of next instruction
+  PARTS:
+    // A instruction
+    Not(in=instruction[15], out=aInst);
 
-    PARTS:
-	//// Replace this comment with your code.
+    // Registers
+    ARegister(in=aIn, load=aLoad, out=aOut, out[0..14]=addressM);
+    DRegister(in=aluOut, load=dLoad, out=dOut);
+
+    // Combinationals
+    And(a=instruction[15], b=instruction[5], out=CInstDestA);
+    Or(a=aInst, b=CInstDestA, out=aLoad);
+    And(a=instruction[15], b=instruction[4], out=dLoad);
+    And(a=instruction[15], b=instruction[3], out=writeM);
+
+    // Mux Control
+    Mux16(a=instruction, b=aluOut, sel=CInstDestA, out=aIn);
+    Mux16(a=aOut, b=inM, sel=instruction[12], out=aluY);
+    
+    // Arithmetic logic unit
+    ALU(x=dOut, zx=instruction[11], nx=instruction[10], 
+        y=aluY, zy=instruction[9], ny=instruction[8], 
+        f=instruction[7], no=instruction[6], out=aluOut, 
+        out=outM, zr=isZero, ng=isNegative);
+    
+    // Jump logic
+    Or(a=isZero, b=isNegative, out=isZeroOrNegative);
+    Not(in=isZeroOrNegative, out=isPositive);
+
+    And(a=isPositive, b=instruction[0], out=jgt);
+    And(a=isZero, b=instruction[1], out=jeq);
+    And(a=isNegative, b=instruction[2], out=jlt);
+
+    Or(a=jgt, b=jeq, out=jge);
+    Or(a=jge, b=jlt, out=jmp);
+
+    // Program Counter
+    And(a=instruction[15], b=jmp, out=pcLoad);
+    Not(in=pcLoad, out=pcInc);
+    PC(in=aOut, inc=pcInc, load=pcLoad, reset=reset, out[0..14]=pc);
 }

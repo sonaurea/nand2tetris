@@ -14,9 +14,14 @@
  * some input using the keyboard, or the program may do some procerssing. 
  */
 CHIP Computer {
+  IN reset;
 
-    IN reset;
-
-    PARTS:
-    //// Replace this comment with your code.
+  PARTS:
+    // 16-bit Computer; 32K ROM + 24k RAM 
+    // (Mem Mapped 8k bit Display and 16 bit Keyboard)
+    ROM32K(address=pcOut, out=romOut);
+    CPU(inM=memOut, instruction=romOut, reset=reset, 
+        outM=mOut, writeM=wM, addressM=addrOut, 
+        pc=pcOut);
+    Memory(in=mOut, load=wM, address=addrOut, out=memOut);
 }
