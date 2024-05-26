@@ -128,7 +128,7 @@ static string arith_comp(string comp)
     asmLine += format("@{}_TRUE_{}\nD;{}\n", comp, jumpCount[comp], comp); // add jump comparator
     asmLine += "@SP\nA=M\nM=0\n"; // Push 0 (false)
     asmLine += format("@{}_END_{}\n0;JMP\n", comp, jumpCount[comp]); // Jump end
-    asmLine += format("({}_TRUE_{})\n@SP\nA=M\nM=-1", comp, jumpCount[comp]); // Push -1 (true)
+    asmLine += format("({}_TRUE_{})\n@SP\nA=M\nM=-1\n", comp, jumpCount[comp]); // Push -1 (true)
     asmLine += format("({}_END_{})\n@SP\nM=M+1\n", comp, jumpCount[comp]); // Increment sp
     ++jumpCount[comp];
     return asmLine;
