@@ -33,11 +33,10 @@ static const unordered_map<string, string> segmentMap
 
 static string mem_push(string segment, int idx)
 {
-    string asmLine="";
-    if(segmentMap.contains(segment) || segment == "constant" || segment == "pointer")
-    {
-        asmLine = format("// Push {} {}\n", segment, idx);
-    }
+    string asmLine = (segmentMap.contains(segment) 
+        || segment == "constant" || segment == "pointer" 
+        || segment == "static") 
+        ? format("// Push {} {}\n", segment, idx):"";
 
     if(segmentMap.contains(segment) || segment == "constant")
     {
@@ -46,25 +45,27 @@ static string mem_push(string segment, int idx)
         {
             asmLine += format("@{}\n", segmentMap.at(segment));
             asmLine += (segment == "temp") ? "A=A+D\n": "A=M+D\n"; // Temp is const, else indirection
-            asmLine += "D=M\n"; // Grab value
         }
     }
-
-    if (segment == "pointer")
+    else if (segment == "pointer")
     {
-        asmLine += format("@{}\nD=M\n", idx?"THAT":"THIS"); // Grab this or that value
+        asmLine += format("@{}\n", idx?"THAT":"THIS"); // Grab this or that value
     }
-    asmLine += "@SP\nA=M\nM=D\n@SP\nM=M+1\n"; // Push value to stack and increment stack
+    else if (segment == "static")
+    {
+        asmLine += format("@static_{}\n", idx); // Grab this or that value
+    }
+
+    if (segment != "constant" && asmLine != "") asmLine += "D=M\n";
+    asmLine += (asmLine != "") ? "@SP\nA=M\nM=D\n@SP\nM=M+1\n" : ""; // Push value to stack and increment stack
     return asmLine;
 }
 
 static string mem_pop(string segment, int idx)
 {
-    string asmLine="";
-    if(segmentMap.contains(segment) || segment == "pointer")
-    {
-        asmLine = format("// Pop {} {}\n", segment, idx);
-    }
+    string asmLine = (segmentMap.contains(segment)
+        || segment == "pointer" || segment == "static") 
+        ? format("// Pop {} {}\n", segment, idx):"";
 
     if(segmentMap.contains(segment))
     {
@@ -73,12 +74,20 @@ static string mem_pop(string segment, int idx)
         asmLine += "@R13\nM=D\n"; // Store address of segment+idx
         asmLine += "@SP\nAM=M-1\nD=M\n@R13\nA=M\nM=D\n"; // Decrement SP and move popped value to segment+idx
     }
-
-    if(segment == "pointer")
+    else if(segment == "pointer" || segment == "static")
     {
         asmLine += "@SP\nAM=M-1\nD=M\n"; // Pop Value
-        asmLine += format("@{}\nM=D\n", idx?"THAT":"THIS"); // Store in this or that
+        if(segment == "pointer")
+        {
+            asmLine += format("@{}\n", idx?"THAT":"THIS"); // Store in this or that
+        }
+        else
+        {
+            asmLine += format("@static_{}\n", idx); // Store in static var
+        }
+        asmLine += "M=D\n"; // Store in static var
     }
+
     return asmLine;
 }
 
