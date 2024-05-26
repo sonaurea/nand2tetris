@@ -34,31 +34,50 @@ static const unordered_map<string, string> segmentMap
 static string mem_push(string segment, int idx)
 {
     string asmLine="";
-    if(segmentMap.contains(segment) || segment == "constant")
+    if(segmentMap.contains(segment) || segment == "constant" || segment == "pointer")
     {
         asmLine = format("// Push {} {}\n", segment, idx);
+    }
+
+    if(segmentMap.contains(segment) || segment == "constant")
+    {
         asmLine += format("@{}\nD=A\n", idx);
         if(segmentMap.find(segment)!=segmentMap.end())
         {
             asmLine += format("@{}\n", segmentMap.at(segment));
             asmLine += (segment == "temp") ? "A=A+D\n": "A=M+D\n"; // Temp is const, else indirection
-            asmLine += "D=M\n";
+            asmLine += "D=M\n"; // Grab value
         }
-        asmLine += "@SP\nA=M\nM=D\n@SP\nM=M+1\n"; // Add D to stack and increment sp
     }
+
+    if (segment == "pointer")
+    {
+        asmLine += format("@{}\nD=M\n", idx?"THAT":"THIS"); // Grab this or that value
+    }
+    asmLine += "@SP\nA=M\nM=D\n@SP\nM=M+1\n"; // Push value to stack and increment stack
     return asmLine;
 }
 
 static string mem_pop(string segment, int idx)
 {
     string asmLine="";
-    if(segmentMap.find(segment)!=segmentMap.end())
+    if(segmentMap.contains(segment) || segment == "pointer")
     {
         asmLine = format("// Pop {} {}\n", segment, idx);
+    }
+
+    if(segmentMap.contains(segment))
+    {
         asmLine += format("@{}\nD=A\n@{}\n", idx, segmentMap.at(segment));
         asmLine += (segment == "temp") ? "D=A+D\n": "D=M+D\n"; // Temp is const, else indirection
-        asmLine += "@R13\nM=D\n";
-        asmLine += "@SP\nAM=M-1\nD=M\n@R13\nA=M\nM=D\n"; // Decrement SP and add popped value
+        asmLine += "@R13\nM=D\n"; // Store address of segment+idx
+        asmLine += "@SP\nAM=M-1\nD=M\n@R13\nA=M\nM=D\n"; // Decrement SP and move popped value to segment+idx
+    }
+
+    if(segment == "pointer")
+    {
+        asmLine += "@SP\nAM=M-1\nD=M\n"; // Pop Value
+        asmLine += format("@{}\nM=D\n", idx?"THAT":"THIS"); // Store in this or that
     }
     return asmLine;
 }
