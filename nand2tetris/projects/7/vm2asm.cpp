@@ -145,26 +145,26 @@ static string arith_lt()
 {
     return arith_comp("JLT");
 }
+
+//@todo: Can combine and, or, not, add, sub, neg into one function
 static string arith_and()
 {
     string asmLine = "// AND op\n";
     asmLine += "@SP\nAM=M-1\nD=M\n"; // First value
-    asmLine += "@SP\nA=M-1\nM=D&M\n"; // And second value
-    asmLine += "@SP\nM=M+1\n"; // Increment sp
+    asmLine += "@SP\nA=M-1\nM=D&M\n"; // AND second value
     return asmLine;
 }
 static string arith_or()
 {
     string asmLine = "// OR op\n";
     asmLine += "@SP\nAM=M-1\nD=M\n"; // First value
-    asmLine += "@SP\nA=M-1\nM=D|M\n"; // Or second value
-    asmLine += "@SP\nM=M+1\n"; // Increment sp
+    asmLine += "@SP\nA=M-1\nM=D|M\n"; // OR second value
     return asmLine;
 }
 static string arith_not()
 {
-    string asmLine = "// Not op\n";
-    asmLine += "@SP\nAM=M-1\nM=!M\n"; // Not first value
+    string asmLine = "// NOT op\n";
+    asmLine += "@SP\nA=M-1\nM=!M\n"; // NOT first value
     return asmLine;
 }
 

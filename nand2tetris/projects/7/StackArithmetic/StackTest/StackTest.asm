@@ -431,8 +431,6 @@ D=M
 @SP
 A=M-1
 M=D&M
-@SP
-M=M+1
 
 // Push constant 82
 @82
@@ -450,12 +448,10 @@ D=M
 @SP
 A=M-1
 M=D|M
-@SP
-M=M+1
 
-// Not op
+// NOT op
 @SP
-AM=M-1
+A=M-1
 M=!M
 
 // End of program
