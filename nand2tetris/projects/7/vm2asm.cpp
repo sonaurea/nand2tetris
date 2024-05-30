@@ -2,8 +2,7 @@
 #include <fstream>  // files
 #include <sstream>  // string stream
 #include <string>   // string
-#include <format>   // format
-#include <stdint.h> // uint
+#include <cstdint> // uint
 #include <vector>   // vector
 #include <unordered_map>// unordered_map
 using namespace std;
@@ -33,43 +32,43 @@ static const unordered_map<string, string> segmentMap
 
 static string mem_push(string segment, int idx)
 {
-    string asmLine = (segmentMap.contains(segment) 
+    string asmLine = (segmentMap.find(segment) != segmentMap.end()
         || segment == "constant" || segment == "pointer" 
         || segment == "static") 
-        ? format("// Push {} {}\n", segment, idx):"";
+        ? "// Push " + segment + " " + to_string(idx) + "\n":"";
 
-    if(segmentMap.contains(segment) || segment == "constant")
+    if(segmentMap.find(segment) != segmentMap.end() || segment == "constant")
     {
-        asmLine += format("@{}\nD=A\n", idx);
+        asmLine += "@" + to_string(idx) + "\nD=A\n";
         if(segmentMap.find(segment)!=segmentMap.end())
         {
-            asmLine += format("@{}\n", segmentMap.at(segment));
+            asmLine += "@" + segmentMap.at(segment) + "\n";
             asmLine += (segment == "temp") ? "A=A+D\n": "A=M+D\n"; // Temp is const, else indirection
         }
     }
     else if (segment == "pointer")
     {
-        asmLine += format("@{}\n", idx?"THAT":"THIS"); // Grab this or that value
+        asmLine += "@" + string((idx ? "THAT" : "THIS")) + "\n"; // Grab this or that value
     }
     else if (segment == "static")
     {
-        asmLine += format("@static_{}\n", idx); // Grab this or that value
+        asmLine += "@static_" + to_string(idx) + "\n"; // Grab this or that value
     }
 
-    if (segment != "constant" && asmLine != "") asmLine += "D=M\n";
-    asmLine += (asmLine != "") ? "@SP\nA=M\nM=D\n@SP\nM=M+1\n" : ""; // Push value to stack and increment stack
+    if (segment != "constant" && !asmLine.empty()) asmLine += "D=M\n";
+    asmLine += (!asmLine.empty()) ? "@SP\nA=M\nM=D\n@SP\nM=M+1\n" : ""; // Push value to stack and increment stack
     return asmLine;
 }
 
 static string mem_pop(string segment, int idx)
 {
-    string asmLine = (segmentMap.contains(segment)
+    string asmLine = (segmentMap.find(segment) != segmentMap.end() 
         || segment == "pointer" || segment == "static") 
-        ? format("// Pop {} {}\n", segment, idx):"";
+        ? "// Pop " + segment + " " + to_string(idx) + "\n":"";
 
-    if(segmentMap.contains(segment))
+    if(segmentMap.find(segment) != segmentMap.end())
     {
-        asmLine += format("@{}\nD=A\n@{}\n", idx, segmentMap.at(segment));
+        asmLine += "@" + to_string(idx) + "\nD=A\n@" + segmentMap.at(segment) + "\n";
         asmLine += (segment == "temp") ? "D=A+D\n": "D=M+D\n"; // Temp is const, else indirection
         asmLine += "@R13\nM=D\n"; // Store address of segment+idx
         asmLine += "@SP\nAM=M-1\nD=M\n@R13\nA=M\nM=D\n"; // Decrement SP and move popped value to segment+idx
@@ -79,11 +78,11 @@ static string mem_pop(string segment, int idx)
         asmLine += "@SP\nAM=M-1\nD=M\n"; // Pop Value
         if(segment == "pointer")
         {
-            asmLine += format("@{}\n", idx?"THAT":"THIS"); // Store in this or that
+            asmLine += "@" + string((idx ? "THAT" : "THIS")) + "\n"; // Store in this or that
         }
         else
         {
-            asmLine += format("@static_{}\n", idx); // Store in static var
+            asmLine += "@static_" + to_string(idx) + "\n"; // Store in static var
         }
         asmLine += "M=D\n"; // Store in static var
     }
@@ -115,21 +114,21 @@ static string arith_sub()
 static string arith_neg()
 {
     string asmLine = "// Neg Op\n";
-    asmLine += "@SP\nA=M-1\nM=-M\n";  // Negate First value
+    asmLine += "@SP\nA=M-1\nM=-M\n";
     return asmLine;
 }
 static string arith_comp(string comp)
 {
     static unordered_map<string, uint8_t> jumpCount;
-    if(!jumpCount.contains(comp)) jumpCount[comp] = 0;
-    string asmLine = format("// {} op\n", comp);
+    if(jumpCount.find(comp)==jumpCount.end()) jumpCount[comp] = 0;
+    string asmLine = "// " + comp + " op\n";
     asmLine += "@SP\nAM=M-1\nD=M\n"; // First value
     asmLine += "@SP\nAM=M-1\nD=M-D\n"; // Subtract second value
-    asmLine += format("@{}_TRUE_{}\nD;{}\n", comp, jumpCount[comp], comp); // add jump comparator
+    asmLine += "@" + comp + "_TRUE_" + to_string(jumpCount[comp]) + "\nD;" + comp + "\n"; // add jump comparator
     asmLine += "@SP\nA=M\nM=0\n"; // Push 0 (false)
-    asmLine += format("@{}_END_{}\n0;JMP\n", comp, jumpCount[comp]); // Jump end
-    asmLine += format("({}_TRUE_{})\n@SP\nA=M\nM=-1\n", comp, jumpCount[comp]); // Push -1 (true)
-    asmLine += format("({}_END_{})\n@SP\nM=M+1\n", comp, jumpCount[comp]); // Increment sp
+    asmLine += "@" + comp + "_END_" + to_string(jumpCount[comp]) + "\n0;JMP\n"; // Jump end
+    asmLine += "(" + comp + "_TRUE_" + to_string(jumpCount[comp]) + ")\n@SP\nA=M\nM=-1\n"; // Push -1 (true)
+    asmLine += "(" + comp + "_END_" + to_string(jumpCount[comp]) + ")\n@SP\nM=M+1\n"; // Increment sp
     ++jumpCount[comp];
     return asmLine;
 }
@@ -222,7 +221,7 @@ int main(int argc, char* argv[])
     }
 
     // Open the hack file
-    ofstream asmFile(format("{}.asm", fileArg.substr(0, fileArg.find('.'))));
+    ofstream asmFile(fileArg.substr(0, fileArg.find('.')) + ".asm");
     if (!asmFile.is_open()) {
         cerr << "Failed to open the machine code file." << endl;
         return 1;
