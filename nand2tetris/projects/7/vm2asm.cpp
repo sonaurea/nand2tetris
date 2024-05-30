@@ -211,7 +211,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    // Open the asm file
+    // Open the vm file
     string fileArg(argv[1]);
     ifstream vmFile(fileArg);
     if (!vmFile.is_open()) 
@@ -220,7 +220,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    // Open the hack file
+    // Open the asm file
     ofstream asmFile(fileArg.substr(0, fileArg.find('.')) + ".asm");
     if (!asmFile.is_open()) {
         cerr << "Failed to open the machine code file." << endl;
@@ -248,7 +248,7 @@ int main(int argc, char* argv[])
     
     // End of Program
     tempAsm = "// End of program\n";
-    tempAsm += "(END)\n@END\n0;JMP"; // End loop
+    tempAsm += "(END)\n@END\n0;JMP";
     asmFile << tempAsm;
 
     asmFile.close();
