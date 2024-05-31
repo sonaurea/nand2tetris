@@ -25,7 +25,7 @@ M=D
 @SP
 M=M+1
 
-// JEQ op
+// eq Op
 @SP
 AM=M-1
 D=M
@@ -65,7 +65,7 @@ M=D
 @SP
 M=M+1
 
-// JEQ op
+// eq Op
 @SP
 AM=M-1
 D=M
@@ -105,7 +105,7 @@ M=D
 @SP
 M=M+1
 
-// JEQ op
+// eq Op
 @SP
 AM=M-1
 D=M
@@ -145,7 +145,7 @@ M=D
 @SP
 M=M+1
 
-// JLT op
+// lt Op
 @SP
 AM=M-1
 D=M
@@ -185,7 +185,7 @@ M=D
 @SP
 M=M+1
 
-// JLT op
+// lt Op
 @SP
 AM=M-1
 D=M
@@ -225,7 +225,7 @@ M=D
 @SP
 M=M+1
 
-// JLT op
+// lt Op
 @SP
 AM=M-1
 D=M
@@ -265,7 +265,7 @@ M=D
 @SP
 M=M+1
 
-// JGT op
+// gt Op
 @SP
 AM=M-1
 D=M
@@ -305,7 +305,7 @@ M=D
 @SP
 M=M+1
 
-// JGT op
+// gt Op
 @SP
 AM=M-1
 D=M
@@ -345,7 +345,7 @@ M=D
 @SP
 M=M+1
 
-// JGT op
+// gt Op
 @SP
 AM=M-1
 D=M
@@ -394,7 +394,7 @@ M=D
 @SP
 M=M+1
 
-// Add Op
+// add Op
 @SP
 AM=M-1
 D=M
@@ -411,7 +411,7 @@ M=D
 @SP
 M=M+1
 
-// Sub Op
+// sub Op
 @SP
 AM=M-1
 D=M
@@ -419,18 +419,18 @@ D=M
 A=M-1
 M=M-D
 
-// Neg Op
+// neg Op
 @SP
 A=M-1
 M=-M
 
-// AND op
+// and Op
 @SP
 AM=M-1
 D=M
 @SP
 A=M-1
-M=D&M
+M=M&D
 
 // Push constant 82
 @82
@@ -441,15 +441,15 @@ M=D
 @SP
 M=M+1
 
-// OR op
+// or Op
 @SP
 AM=M-1
 D=M
 @SP
 A=M-1
-M=D|M
+M=M|D
 
-// NOT op
+// not Op
 @SP
 A=M-1
 M=!M

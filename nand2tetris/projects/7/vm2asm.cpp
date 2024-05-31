@@ -5,29 +5,35 @@
 #include <cstdint> // uint
 #include <vector>   // vector
 #include <unordered_map>// unordered_map
+#include <unordered_set>// unordered_set
 using namespace std;
 
+static string arith_comp(string comp);
 static string mem_push(string segment, int idx);
 static string mem_pop(string segment, int idx);
-static string arith_add();
-static string arith_sub();
-static string arith_neg();
-static string arith_eq();
-static string arith_gt();
-static string arith_lt();
-static string arith_and();
-static string arith_or();
-static string arith_not();
 
-static const unordered_map<string, string(*)(string, int)> memAccessMap
+static const unordered_set<string> arithmeticSet
 {
-    {"push", &mem_push}, {"pop", &mem_pop}
+    {"add"}, {"sub"}, {"neg"}, 
+    {"eq"}, {"gt"}, {"lt"}, 
+    {"and"}, {"or"}, {"not"}
+};
+
+static const unordered_map<string, string> opMap
+{
+    {"and", "&"}, {"or", "|"}, {"neg", "-"}, {"not", "!"}, 
+    {"add", "+"}, {"sub", "-"}
 };
 
 static const unordered_map<string, string> segmentMap
 {
     {"local", "LCL"}, {"argument", "ARG"},
     {"this", "THIS"}, {"that", "THAT"}, {"temp", "5"}
+};
+
+static const unordered_map<string, string(*)(string, int)> memAccessMap
+{
+    {"push", &mem_push}, {"pop", &mem_pop}
 };
 
 static string mem_push(string segment, int idx)
@@ -90,39 +96,39 @@ static string mem_pop(string segment, int idx)
     return asmLine;
 }
 
-static const unordered_map<string, string(*)()> arithmeticMap
-{
-    {"add", &arith_add}, {"sub", &arith_sub}, {"neg", &arith_neg}, 
-    {"eq", &arith_eq}, {"gt", &arith_gt}, {"lt", &arith_lt}, 
-    {"and", &arith_and}, {"or", &arith_or}, {"not", &arith_not}
-};
 
-static string arith_add()
+static string arith(string op)
 {
-    string asmLine = "// Add Op\n";
-    asmLine += "@SP\nAM=M-1\nD=M\n"; // First value
-    asmLine += "@SP\nA=M-1\nM=M+D\n";  // Second value
+    string asmLine = "// " + op + " Op\n";
+    if(op=="add" || op=="sub" || op=="and" || op=="or")
+    {
+        asmLine += "@SP\nAM=M-1\nD=M\n"; // First value
+        asmLine += "@SP\nA=M-1\nM=M" + opMap.at(op) + "D\n";  // Second value
+    }
+    else if (op=="not" || op=="neg")
+    {
+        asmLine += "@SP\nA=M-1\nM=" + opMap.at(op) + "M\n";
+    }
+    else if(op == "eq")
+    {
+        asmLine += arith_comp("JEQ");
+    }
+    else if(op == "gt")
+    {
+        asmLine += arith_comp("JGT");
+    }
+    else if(op == "lt")
+    {
+        asmLine += arith_comp("JLT");
+    }
     return asmLine;
 }
-static string arith_sub()
-{
-    string asmLine = "// Sub Op\n";
-    asmLine += "@SP\nAM=M-1\nD=M\n"; // First value
-    asmLine += "@SP\nA=M-1\nM=M-D\n"; // Second value
-    return asmLine;
-}
-static string arith_neg()
-{
-    string asmLine = "// Neg Op\n";
-    asmLine += "@SP\nA=M-1\nM=-M\n";
-    return asmLine;
-}
+
 static string arith_comp(string comp)
 {
     static unordered_map<string, uint8_t> jumpCount;
     if(jumpCount.find(comp)==jumpCount.end()) jumpCount[comp] = 0;
-    string asmLine = "// " + comp + " op\n";
-    asmLine += "@SP\nAM=M-1\nD=M\n"; // First value
+    string asmLine = "@SP\nAM=M-1\nD=M\n"; // First value
     asmLine += "@SP\nAM=M-1\nD=M-D\n"; // Subtract second value
     asmLine += "@" + comp + "_TRUE_" + to_string(jumpCount[comp]) + "\nD;" + comp + "\n"; // add jump comparator
     asmLine += "@SP\nA=M\nM=0\n"; // Push 0 (false)
@@ -130,40 +136,6 @@ static string arith_comp(string comp)
     asmLine += "(" + comp + "_TRUE_" + to_string(jumpCount[comp]) + ")\n@SP\nA=M\nM=-1\n"; // Push -1 (true)
     asmLine += "(" + comp + "_END_" + to_string(jumpCount[comp]) + ")\n@SP\nM=M+1\n"; // Increment sp
     ++jumpCount[comp];
-    return asmLine;
-}
-static string arith_eq()
-{
-    return arith_comp("JEQ");
-}
-static string arith_gt()
-{
-    return arith_comp("JGT");
-}
-static string arith_lt()
-{
-    return arith_comp("JLT");
-}
-
-//@todo: Can combine and, or, not, add, sub, neg into one function
-static string arith_and()
-{
-    string asmLine = "// AND op\n";
-    asmLine += "@SP\nAM=M-1\nD=M\n"; // First value
-    asmLine += "@SP\nA=M-1\nM=D&M\n"; // AND second value
-    return asmLine;
-}
-static string arith_or()
-{
-    string asmLine = "// OR op\n";
-    asmLine += "@SP\nAM=M-1\nD=M\n"; // First value
-    asmLine += "@SP\nA=M-1\nM=D|M\n"; // OR second value
-    return asmLine;
-}
-static string arith_not()
-{
-    string asmLine = "// NOT op\n";
-    asmLine += "@SP\nA=M-1\nM=!M\n"; // NOT first value
     return asmLine;
 }
 
@@ -187,9 +159,9 @@ static vector<string> splitString(const string& str) {
  */
 static string vm2Asm(const vector<string> vmLine)
 {
-    if(arithmeticMap.find(vmLine[0]) != arithmeticMap.end())
+    if(arithmeticSet.find(vmLine[0]) != arithmeticSet.end())
     {
-        return arithmeticMap.at(vmLine[0])();
+        return arith(vmLine[0]);
     }
     else if(memAccessMap.find(vmLine[0]) != memAccessMap.end())
     {
