@@ -8,9 +8,12 @@
 #include <unordered_set>// unordered_set
 using namespace std;
 
-static string arith_comp(string comp);
-static string mem_push(string segment, int idx);
-static string mem_pop(string segment, int idx);
+static const string arith_comp(const string comp);
+static const string mem_push(const string segment, const int idx);
+static const string mem_pop(const string segment, const int idx);
+
+static unordered_map<string, pair<uint32_t, uint8_t>> labelMap{};
+static uint32_t returnCount = 0;
 
 static const unordered_set<string> arithmeticSet
 {
@@ -31,12 +34,12 @@ static const unordered_map<string, string> segmentMap
     {"this", "THIS"}, {"that", "THAT"}, {"temp", "5"}
 };
 
-static const unordered_map<string, string(*)(string, int)> memAccessMap
+static const unordered_map<string, const string(*)(const string, const int)> memAccessMap
 {
     {"push", &mem_push}, {"pop", &mem_pop}
 };
 
-static string mem_push(string segment, int idx)
+static const string mem_push(const string segment, const int idx)
 {
     string asmLine = (segmentMap.find(segment) != segmentMap.end()
         || segment == "constant" || segment == "pointer" 
@@ -62,11 +65,11 @@ static string mem_push(string segment, int idx)
     }
 
     if (segment != "constant" && !asmLine.empty()) asmLine += "D=M\n";
-    asmLine += (!asmLine.empty()) ? "@SP\nA=M\nM=D\n@SP\nM=M+1\n" : ""; // Push value to stack and increment stack
+    asmLine += (!asmLine.empty()) ? "@SP\nA=M\nM=D\n@SP\nM=M+1" : ""; // Push value to stack and increment stack
     return asmLine;
 }
 
-static string mem_pop(string segment, int idx)
+static const string mem_pop(const string segment, const int idx)
 {
     string asmLine = (segmentMap.find(segment) != segmentMap.end() 
         || segment == "pointer" || segment == "static") 
@@ -77,7 +80,7 @@ static string mem_pop(string segment, int idx)
         asmLine += "@" + to_string(idx) + "\nD=A\n@" + segmentMap.at(segment) + "\n";
         asmLine += (segment == "temp") ? "D=A+D\n": "D=M+D\n"; // Temp is const, else indirection
         asmLine += "@R13\nM=D\n"; // Store address of segment+idx
-        asmLine += "@SP\nAM=M-1\nD=M\n@R13\nA=M\nM=D\n"; // Decrement SP and move popped value to segment+idx
+        asmLine += "@SP\nAM=M-1\nD=M\n@R13\nA=M\nM=D"; // Decrement SP and move popped value to segment+idx
     }
     else if(segment == "pointer" || segment == "static")
     {
@@ -90,24 +93,24 @@ static string mem_pop(string segment, int idx)
         {
             asmLine += "@static_" + to_string(idx) + "\n"; // Store in static var
         }
-        asmLine += "M=D\n"; // Store in static var
+        asmLine += "M=D"; // Store in static var
     }
 
     return asmLine;
 }
 
 
-static string arith(string op)
+static const string arith(const string op)
 {
     string asmLine = "// " + op + " Op\n";
     if(op=="add" || op=="sub" || op=="and" || op=="or")
     {
         asmLine += "@SP\nAM=M-1\nD=M\n"; // First value
-        asmLine += "@SP\nA=M-1\nM=M" + opMap.at(op) + "D\n";  // Second value
+        asmLine += "@SP\nA=M-1\nM=M" + opMap.at(op) + "D";  // Second value
     }
     else if (op=="not" || op=="neg")
     {
-        asmLine += "@SP\nA=M-1\nM=" + opMap.at(op) + "M\n";
+        asmLine += "@SP\nA=M-1\nM=" + opMap.at(op) + "M";
     }
     else if(op == "eq")
     {
@@ -124,7 +127,7 @@ static string arith(string op)
     return asmLine;
 }
 
-static string arith_comp(string comp)
+static const string arith_comp(const string comp)
 {
     static unordered_map<string, uint8_t> jumpCount;
     if(jumpCount.find(comp)==jumpCount.end()) jumpCount[comp] = 0;
@@ -134,15 +137,30 @@ static string arith_comp(string comp)
     asmLine += "@SP\nA=M\nM=0\n"; // Push 0 (false)
     asmLine += "@" + comp + "_END_" + to_string(jumpCount[comp]) + "\n0;JMP\n"; // Jump end
     asmLine += "(" + comp + "_TRUE_" + to_string(jumpCount[comp]) + ")\n@SP\nA=M\nM=-1\n"; // Push -1 (true)
-    asmLine += "(" + comp + "_END_" + to_string(jumpCount[comp]) + ")\n@SP\nM=M+1\n"; // Increment sp
+    asmLine += "(" + comp + "_END_" + to_string(jumpCount[comp]) + ")\n@SP\nM=M+1"; // Increment sp
     ++jumpCount[comp];
+    return asmLine;
+}
+
+static const string vm_init()
+{
+    string asmLine = "// Virtual Machine code to assembly code in C++ for the Hack computer.\n//\t\tSonaurea/RoyalArdor\n";
+    asmLine += "// Initializations\n";
+    asmLine += "// Stack Init\n@256\nD=A\n@SP\nM=D"; // Stack Init
+    return asmLine;
+}
+
+static const string vm_deinit()
+{
+    string asmLine = "// End of program\n";
+    asmLine += "(END)\n@END\n0;JMP";
     return asmLine;
 }
 
 /*
  * Splits a string into words
  */
-static vector<string> splitString(const string& str) {
+static const vector<string> splitString(const string& str) {
     istringstream iss(str);
     vector<string> words;
     string word;
@@ -167,6 +185,61 @@ static string vm2Asm(const vector<string> vmLine)
     {
         return memAccessMap.at(vmLine[0])(vmLine[1], stoi(vmLine[2]));
     }
+    else if(vmLine[0] == "label")
+    {
+        return "(" + vmLine[1] + ")";
+    }
+    else if (vmLine[0] == "goto")
+    {
+        // Jump directly to label
+        return "// goto " + vmLine[1] + "\n@" + vmLine[1] + "\n0;JMP";
+    }
+    else if (vmLine[0] == "if-goto")
+    {
+        // Check top of stack value then jump
+        return "// if-goto " + vmLine[1] + "\n@SP\nAM=M-1\nD=M\n@" + vmLine[1] + "\nD;JNE";
+    }
+    else if (vmLine[0] == "function")
+    {
+        string asmLine = "(" + vmLine[1] + ")\n"; // Label for the function entry point
+
+        // Allocate space for local variables on the stack
+        int numLocals = stoi(vmLine[2]);
+        for (int i = 0; i < numLocals; ++i)
+        {
+            asmLine += "@SP\nA=M\nM=0\n@SP\nM=M+1\n"; // Initialize local variables to 0
+        }
+        return asmLine;
+    }
+    else if (vmLine[0] == "call")
+    {
+        // Create a unique return label using the function name and return count
+        string returnLabel = vmLine[1] + "$ret." + to_string(returnCount++);
+
+        // Push return address onto the stack
+        string asmLine = "@" + returnLabel + "\nD=A\n@SP\nA=M\nM=D\n@SP\nM=M+1\n";
+
+        // Save the state of the calling function onto the stack
+        asmLine += "@LCL\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n"; // Save LCL
+        asmLine += "@ARG\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n"; // Save ARG
+        asmLine += "@THIS\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n"; // Save THIS
+        asmLine += "@THAT\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n"; // Save THAT
+
+        // Set ARG to point to the new argument segment
+        int numArgs = stoi(vmLine[2]);
+        asmLine += "@SP\nD=M\n@" + to_string(numArgs + 5) + "\nD=D-A\n@ARG\nM=D\n";
+
+        // Set LCL to point to the current stack frame
+        asmLine += "@SP\nD=M\n@LCL\nM=D\n";
+
+        // Jump to the function's entry point
+        asmLine += "@" + vmLine[1] + "\n0;JMP\n";
+
+        // Define the return label
+        asmLine += "(" + returnLabel + ")";
+
+        return asmLine;
+    }
     else
     {
         cerr << "Invalid vm operand " << vmLine[0] << endl;
@@ -184,7 +257,7 @@ int main(int argc, char* argv[])
     }
 
     // Open the vm file
-    string fileArg(argv[1]);
+    const string fileArg(argv[1]);
     ifstream vmFile(fileArg);
     if (!vmFile.is_open()) 
     {
@@ -200,29 +273,19 @@ int main(int argc, char* argv[])
     }
 
     // Initializations
-    string tempAsm = "// Virtual Machine code to assembly code in C++ for the Hack computer.\n//\t\tSonaurea/RoyalArdor\n";
-    tempAsm += "// Initializations\n";
-    tempAsm += "// Stack Init\n@256\nD=A\n@SP\nM=D\n"; // Stack Init
-    asmFile << tempAsm << endl;
+    asmFile << vm_init() << endl;
 
     // Parse virtual machine file line by line.
     string line{};
-    vector<string> words;
-    while(getline(vmFile, line)) 
+    while(getline(vmFile, line))
     {
-        words = splitString(line);
-
         if(line != "" && line[0] != '/' && line[0] != '*' && line[0] != '(')
         {
-            asmFile << vm2Asm(words) << endl;
+            asmFile << vm2Asm(splitString(line)) << endl;
         }
     }
-    
-    // End of Program
-    tempAsm = "// End of program\n";
-    tempAsm += "(END)\n@END\n0;JMP";
-    asmFile << tempAsm;
 
+    // End of Program
     asmFile.close();
     vmFile.close();
     return 0;
