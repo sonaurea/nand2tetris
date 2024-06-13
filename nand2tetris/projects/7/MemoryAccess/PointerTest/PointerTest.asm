@@ -15,14 +15,12 @@ A=M
 M=D
 @SP
 M=M+1
-
 // Pop pointer 0
 @SP
 AM=M-1
 D=M
 @THIS
 M=D
-
 // Push constant 3040
 @3040
 D=A
@@ -31,14 +29,12 @@ A=M
 M=D
 @SP
 M=M+1
-
 // Pop pointer 1
 @SP
 AM=M-1
 D=M
 @THAT
 M=D
-
 // Push constant 32
 @32
 D=A
@@ -47,7 +43,6 @@ A=M
 M=D
 @SP
 M=M+1
-
 // Pop this 2
 @2
 D=A
@@ -61,7 +56,6 @@ D=M
 @R13
 A=M
 M=D
-
 // Push constant 46
 @46
 D=A
@@ -70,7 +64,6 @@ A=M
 M=D
 @SP
 M=M+1
-
 // Pop that 6
 @6
 D=A
@@ -84,7 +77,6 @@ D=M
 @R13
 A=M
 M=D
-
 // Push pointer 0
 @THIS
 D=M
@@ -93,7 +85,6 @@ A=M
 M=D
 @SP
 M=M+1
-
 // Push pointer 1
 @THAT
 D=M
@@ -102,15 +93,13 @@ A=M
 M=D
 @SP
 M=M+1
-
-// Add Op
+// add Op
 @SP
 AM=M-1
 D=M
 @SP
 A=M-1
 M=M+D
-
 // Push this 2
 @2
 D=A
@@ -122,15 +111,13 @@ A=M
 M=D
 @SP
 M=M+1
-
-// Sub Op
+// sub Op
 @SP
 AM=M-1
 D=M
 @SP
 A=M-1
 M=M-D
-
 // Push that 6
 @6
 D=A
@@ -142,16 +129,10 @@ A=M
 M=D
 @SP
 M=M+1
-
-// Add Op
+// add Op
 @SP
 AM=M-1
 D=M
 @SP
 A=M-1
 M=M+D
-
-// End of program
-(END)
-@END
-0;JMP

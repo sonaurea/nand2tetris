@@ -15,7 +15,6 @@ A=M
 M=D
 @SP
 M=M+1
-
 // Push constant 333
 @333
 D=A
@@ -24,7 +23,6 @@ A=M
 M=D
 @SP
 M=M+1
-
 // Push constant 888
 @888
 D=A
@@ -33,72 +31,59 @@ A=M
 M=D
 @SP
 M=M+1
-
 // Pop static 8
 @SP
 AM=M-1
 D=M
-@static_8
+@StaticTest.8
 M=D
-
 // Pop static 3
 @SP
 AM=M-1
 D=M
-@static_3
+@StaticTest.3
 M=D
-
 // Pop static 1
 @SP
 AM=M-1
 D=M
-@static_1
+@StaticTest.1
 M=D
-
 // Push static 3
-@static_3
+@StaticTest.3
 D=M
 @SP
 A=M
 M=D
 @SP
 M=M+1
-
 // Push static 1
-@static_1
+@StaticTest.1
 D=M
 @SP
 A=M
 M=D
 @SP
 M=M+1
-
-// Sub Op
+// sub Op
 @SP
 AM=M-1
 D=M
 @SP
 A=M-1
 M=M-D
-
 // Push static 8
-@static_8
+@StaticTest.8
 D=M
 @SP
 A=M
 M=D
 @SP
 M=M+1
-
-// Add Op
+// add Op
 @SP
 AM=M-1
 D=M
 @SP
 A=M-1
 M=M+D
-
-// End of program
-(END)
-@END
-0;JMP

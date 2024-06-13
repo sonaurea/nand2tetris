@@ -6,14 +6,15 @@
 #include <vector>   // vector
 #include <unordered_map>// unordered_map
 #include <unordered_set>// unordered_set
+#include <filesystem> // directory_iterator
 using namespace std;
+using namespace std::filesystem;
 
 static const string arith_comp(const string comp);
 static const string mem_push(const string segment, const int idx);
 static const string mem_pop(const string segment, const int idx);
 
-static unordered_map<string, pair<uint32_t, uint8_t>> labelMap{};
-static uint32_t returnCount = 0;
+static string currFile = "static";
 
 static const unordered_set<string> arithmeticSet
 {
@@ -24,7 +25,7 @@ static const unordered_set<string> arithmeticSet
 
 static const unordered_map<string, string> opMap
 {
-    {"and", "&"}, {"or", "|"}, {"neg", "-"}, {"not", "!"}, 
+    {"and", "&"}, {"or", "|"}, {"neg", "-"}, {"not", "!"},
     {"add", "+"}, {"sub", "-"}
 };
 
@@ -39,11 +40,27 @@ static const unordered_map<string, const string(*)(const string, const int)> mem
     {"push", &mem_push}, {"pop", &mem_pop}
 };
 
+/*
+ * Converts each character to upper case in a string and returns the new string
+ */
+string toUpper(const string str) 
+{
+    string s;
+    for (auto& ch : str) 
+    {
+        s += toupper(ch);
+    }
+    return s;
+}
+
+/*
+ * Memory segment push value
+ */
 static const string mem_push(const string segment, const int idx)
 {
     string asmLine = (segmentMap.find(segment) != segmentMap.end()
-        || segment == "constant" || segment == "pointer" 
-        || segment == "static") 
+        || segment == "constant" || segment == "pointer"
+        || segment == "static")
         ? "// Push " + segment + " " + to_string(idx) + "\n":"";
 
     if(segmentMap.find(segment) != segmentMap.end() || segment == "constant")
@@ -61,7 +78,7 @@ static const string mem_push(const string segment, const int idx)
     }
     else if (segment == "static")
     {
-        asmLine += "@static_" + to_string(idx) + "\n"; // Grab this or that value
+        asmLine += "@" + currFile + "." + to_string(idx) + "\n"; // Set static label
     }
 
     if (segment != "constant" && !asmLine.empty()) asmLine += "D=M\n";
@@ -69,38 +86,46 @@ static const string mem_push(const string segment, const int idx)
     return asmLine;
 }
 
+/*
+ * Memory segment pop value
+ */
 static const string mem_pop(const string segment, const int idx)
 {
-    string asmLine = (segmentMap.find(segment) != segmentMap.end() 
+    string asmLine = (segmentMap.find(segment) != segmentMap.end()
         || segment == "pointer" || segment == "static") 
         ? "// Pop " + segment + " " + to_string(idx) + "\n":"";
 
-    if(segmentMap.find(segment) != segmentMap.end())
+    if((segmentMap.find(segment) != segmentMap.end()) && (segment != "temp"))
     {
-        asmLine += "@" + to_string(idx) + "\nD=A\n@" + segmentMap.at(segment) + "\n";
-        asmLine += (segment == "temp") ? "D=A+D\n": "D=M+D\n"; // Temp is const, else indirection
+        asmLine += "@" + to_string(idx) + "\nD=A\n@" + segmentMap.at(segment) + "\nD=M+D\n"; // Get idx offset segment
         asmLine += "@R13\nM=D\n"; // Store address of segment+idx
         asmLine += "@SP\nAM=M-1\nD=M\n@R13\nA=M\nM=D"; // Decrement SP and move popped value to segment+idx
     }
-    else if(segment == "pointer" || segment == "static")
+    else if(segment == "pointer" || segment == "static" || segment == "temp")
     {
         asmLine += "@SP\nAM=M-1\nD=M\n"; // Pop Value
         if(segment == "pointer")
         {
             asmLine += "@" + string((idx ? "THAT" : "THIS")) + "\n"; // Store in this or that
         }
+        else if(segment == "temp")
+        {
+            asmLine += "@" + to_string(stoi(segmentMap.at(segment)) + idx) + "\n"; // Store in temp+idx
+        }
         else
         {
-            asmLine += "@static_" + to_string(idx) + "\n"; // Store in static var
+            asmLine += "@" + currFile + "." + to_string(idx) + "\n"; // Set static label
         }
-        asmLine += "M=D"; // Store in static var
+        asmLine += "M=D"; // Store popped val
     }
 
     return asmLine;
 }
 
-
-static const string arith(const string op)
+/*
+ * Arithmetic assembly code
+ */
+static const string vm_arith(const string op)
 {
     string asmLine = "// " + op + " Op\n";
     if(op=="add" || op=="sub" || op=="and" || op=="or")
@@ -112,64 +137,123 @@ static const string arith(const string op)
     {
         asmLine += "@SP\nA=M-1\nM=" + opMap.at(op) + "M";
     }
-    else if(op == "eq")
+    else if(op == "eq" || op == "gt" || op == "lt")
     {
-        asmLine += arith_comp("JEQ");
-    }
-    else if(op == "gt")
-    {
-        asmLine += arith_comp("JGT");
-    }
-    else if(op == "lt")
-    {
-        asmLine += arith_comp("JLT");
+        asmLine += arith_comp(op);
     }
     return asmLine;
 }
 
+/*
+ * Jump comparison check assembly code
+ */
 static const string arith_comp(const string comp)
 {
+    const string op = 'J' + toUpper(comp);
     static unordered_map<string, uint8_t> jumpCount;
-    if(jumpCount.find(comp)==jumpCount.end()) jumpCount[comp] = 0;
+    if(jumpCount.find(op) == jumpCount.end()) jumpCount[op] = 0;
     string asmLine = "@SP\nAM=M-1\nD=M\n"; // First value
     asmLine += "@SP\nAM=M-1\nD=M-D\n"; // Subtract second value
-    asmLine += "@" + comp + "_TRUE_" + to_string(jumpCount[comp]) + "\nD;" + comp + "\n"; // add jump comparator
+    asmLine += "@" + op + "_TRUE_" + to_string(jumpCount[op]) + "\nD;" + op + "\n"; // add jump oparator
     asmLine += "@SP\nA=M\nM=0\n"; // Push 0 (false)
-    asmLine += "@" + comp + "_END_" + to_string(jumpCount[comp]) + "\n0;JMP\n"; // Jump end
-    asmLine += "(" + comp + "_TRUE_" + to_string(jumpCount[comp]) + ")\n@SP\nA=M\nM=-1\n"; // Push -1 (true)
-    asmLine += "(" + comp + "_END_" + to_string(jumpCount[comp]) + ")\n@SP\nM=M+1"; // Increment sp
-    ++jumpCount[comp];
+    asmLine += "@" + op + "_END_" + to_string(jumpCount[op]) + "\n0;JMP\n"; // Jump end
+    asmLine += "(" + op + "_TRUE_" + to_string(jumpCount[op]) + ")\n@SP\nA=M\nM=-1\n"; // Push -1 (true)
+    asmLine += "(" + op + "_END_" + to_string(jumpCount[op]) + ")\n@SP\nM=M+1"; // Increment sp
+    ++jumpCount[op];
     return asmLine;
 }
 
-static const string vm_init()
+/*
+ * Call assembly code does context switch
+ */
+static const string vm_call(const string func, const string args) 
 {
-    string asmLine = "// Virtual Machine code to assembly code in C++ for the Hack computer.\n//\t\tSonaurea/RoyalArdor\n";
-    asmLine += "// Initializations\n";
-    asmLine += "// Stack Init\n@256\nD=A\n@SP\nM=D"; // Stack Init
+    static uint16_t returnCount = 0;
+    string returnLabel = func + "$ret." + to_string(returnCount++);
+
+    string asmLine = "// call " + func + "\n";
+    asmLine += "@" + returnLabel + "\nD=A\n@SP\nA=M\nM=D\n@SP\nM=M+1\n"; // Push return address
+    asmLine += "@LCL\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n"; // Push LCL
+    asmLine += "@ARG\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n"; // Push ARG
+    asmLine += "@THIS\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n"; // Push THIS
+    asmLine += "@THAT\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n"; // Push THAT
+    asmLine += "@SP\nD=M\n@" + to_string(stoi(args) + 5) + "\nD=D-A\n@ARG\nM=D\n"; // ARG = SP - n - 5
+    asmLine += "@SP\nD=M\n@LCL\nM=D\n"; // LCL = SP
+    asmLine += "@" + func + "\n0;JMP\n"; // goto function
+    asmLine += "(" + returnLabel + ")"; // return label
+
     return asmLine;
 }
 
-static const string vm_deinit()
+/*
+ * Return assembly code to switch context
+ */
+static const string vm_return() 
 {
-    string asmLine = "// End of program\n";
-    asmLine += "(END)\n@END\n0;JMP";
+    string asmLine = "// return\n";
+    asmLine += "@LCL\nD=M\n@frame\nM=D\n"; // FRAME = LCL
+    asmLine += "@5\nA=D-A\nD=M\n@RET\nM=D\n"; // RET = *(FRAME - 5)
+    asmLine += "@SP\nAM=M-1\nD=M\n@ARG\nA=M\nM=D\n"; // *ARG = pop()
+    asmLine += "@ARG\nD=M+1\n@SP\nM=D\n"; // SP = ARG + 1
+    asmLine += "@frame\nAM=M-1\nD=M\n@THAT\nM=D\n"; // THAT = *(FRAME - 1)
+    asmLine += "@frame\nAM=M-1\nD=M\n@THIS\nM=D\n"; // THIS = *(FRAME - 2)
+    asmLine += "@frame\nAM=M-1\nD=M\n@ARG\nM=D\n"; // ARG = *(FRAME - 3)
+    asmLine += "@frame\nAM=M-1\nD=M\n@LCL\nM=D\n"; // LCL = *(FRAME - 4)
+    asmLine += "@RET\nA=M\n0;JMP\n"; // goto RET
+
+    return asmLine;
+}
+
+/*
+ * Returns bootstrap assembly code
+ */
+static const string vm_init(bool singleFile)
+{
+    string asmLine = "// Bootstrap code\n";
+    if (!singleFile)
+    {
+        asmLine += "// Stack Init\n";
+        asmLine += "@256\nD=A\n@SP\nM=D\n";
+        asmLine += vm_call("Sys.init", "0");
+    }
     return asmLine;
 }
 
 /*
  * Splits a string into words
  */
-static const vector<string> splitString(const string& str) {
+static const vector<string> splitWords(const string& str) 
+{
     istringstream iss(str);
     vector<string> words;
     string word;
-    
-    while (iss >> word) {
+
+    while (iss >> word)
+    {
         words.push_back(word);
     }
-    
+
     return words;
+}
+
+/*
+ * Splits a string by a delimiter
+ */
+vector<string> split(const string& str, const string& delimiter) 
+{
+    vector<string> tokens;
+    size_t prev = 0, pos = 0;
+
+    do
+    {
+        pos = str.find(delimiter, prev);
+        if (pos == string::npos) pos = str.length();
+        string token = str.substr(prev, pos - prev);
+        if (!token.empty()) tokens.push_back(token);
+        prev = pos + delimiter.length();
+    } while (pos < str.length() && prev < str.length());
+
+    return tokens;
 }
 
 /* 
@@ -179,7 +263,7 @@ static string vm2Asm(const vector<string> vmLine)
 {
     if(arithmeticSet.find(vmLine[0]) != arithmeticSet.end())
     {
-        return arith(vmLine[0]);
+        return vm_arith(vmLine[0]);
     }
     else if(memAccessMap.find(vmLine[0]) != memAccessMap.end())
     {
@@ -207,38 +291,17 @@ static string vm2Asm(const vector<string> vmLine)
         int numLocals = stoi(vmLine[2]);
         for (int i = 0; i < numLocals; ++i)
         {
-            asmLine += "@SP\nA=M\nM=0\n@SP\nM=M+1\n"; // Initialize local variables to 0
+            asmLine += "@SP\nA=M\nM=0\n@SP\nM=M+1\n";
         }
         return asmLine;
     }
     else if (vmLine[0] == "call")
     {
-        // Create a unique return label using the function name and return count
-        string returnLabel = vmLine[1] + "$ret." + to_string(returnCount++);
-
-        // Push return address onto the stack
-        string asmLine = "@" + returnLabel + "\nD=A\n@SP\nA=M\nM=D\n@SP\nM=M+1\n";
-
-        // Save the state of the calling function onto the stack
-        asmLine += "@LCL\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n"; // Save LCL
-        asmLine += "@ARG\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n"; // Save ARG
-        asmLine += "@THIS\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n"; // Save THIS
-        asmLine += "@THAT\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n"; // Save THAT
-
-        // Set ARG to point to the new argument segment
-        int numArgs = stoi(vmLine[2]);
-        asmLine += "@SP\nD=M\n@" + to_string(numArgs + 5) + "\nD=D-A\n@ARG\nM=D\n";
-
-        // Set LCL to point to the current stack frame
-        asmLine += "@SP\nD=M\n@LCL\nM=D\n";
-
-        // Jump to the function's entry point
-        asmLine += "@" + vmLine[1] + "\n0;JMP\n";
-
-        // Define the return label
-        asmLine += "(" + returnLabel + ")";
-
-        return asmLine;
+        return vm_call(vmLine[1], vmLine[2]);
+    }
+    else if (vmLine[0] == "return")
+    {
+        return vm_return();
     }
     else
     {
@@ -247,46 +310,97 @@ static string vm2Asm(const vector<string> vmLine)
     }
 }
 
+/* 
+ *  Convert a vm file to a singular asm file
+ */
+static void processFile(const string& path, ofstream& asmFile) 
+{
+    ifstream vmFile(path);
+    if (vmFile.is_open()) 
+    {
+        cout << "Opened file: " << path << endl;
+        string line;
+        while (getline(vmFile, line)) 
+        {
+            if(line != "" && line[0] != '/' && line[0] != '*' && line[0] != '(')
+            {
+                asmFile << vm2Asm(splitWords(line)) << endl;
+            }
+        }
+        vmFile.close();
+    }
+    else
+    {
+        cerr << "Failed to open file: " << path << endl;
+    }
+}
+
+/* 
+ *  Main program
+ *  Arg(s):
+ *  1. String (filename or directory)
+ */
 int main(int argc, char* argv[])
 {
-    // Assert arg count
     if (argc != 2) 
     {
-        cerr << "Usage: " << argv[0] << " <filename>" << endl;
+        cerr << "Usage: " << argv[0] << " <filename_or_directory>" << endl;
         return 1;
     }
 
-    // Open the vm file
-    const string fileArg(argv[1]);
-    ifstream vmFile(fileArg);
-    if (!vmFile.is_open()) 
+    const string inputPath(argv[1]);
+    ofstream asmFile;
+
+    bool singleFile = !is_directory(inputPath);
+    if (!singleFile) 
     {
-        cerr << "Failed to open the vm file." << endl;
-        return 1;
-    }
-
-    // Open the asm file
-    ofstream asmFile(fileArg.substr(0, fileArg.find('.')) + ".asm");
-    if (!asmFile.is_open()) {
-        cerr << "Failed to open the machine code file." << endl;
-        return 1;
-    }
-
-    // Initializations
-    asmFile << vm_init() << endl;
-
-    // Parse virtual machine file line by line.
-    string line{};
-    while(getline(vmFile, line))
-    {
-        if(line != "" && line[0] != '/' && line[0] != '*' && line[0] != '(')
+        const vector<string> Path_Tokenized = split(inputPath, "\\");
+        asmFile.open(inputPath + ("/" + Path_Tokenized.back() + ".asm"));
+        if (!asmFile.is_open())
         {
-            asmFile << vm2Asm(splitString(line)) << endl;
+            cerr << "Failed to open the machine code file." << endl;
+            return 1;
+        }
+
+        // Initialize the assembly file with bootstrap code
+        asmFile << vm_init(singleFile) << endl;
+
+        try
+        {
+            for (const auto& entry : directory_iterator(inputPath)) 
+            {
+                if (entry.is_regular_file() && entry.path().extension() == ".vm") 
+                {
+                    currFile = entry.path().stem().string();
+                    processFile(entry.path().string(), asmFile);
+                }
+            }
+        }
+        catch (const filesystem_error& e) 
+        {
+            cerr << "Filesystem error: " << e.what() << endl;
+        }
+        catch (const exception& e) 
+        {
+            cerr << "Exception: " << e.what() << endl;
         }
     }
+    else 
+    {
+        const string asmFileName = split(inputPath, ".")[0] + ".asm";
+        asmFile.open(asmFileName);
+        if (!asmFile.is_open())
+        {
+            cerr << "Failed to open the machine code file." << endl;
+            return 1;
+        }
 
-    // End of Program
+        const string fileName = split(inputPath, "\\").back();
+        currFile = split(fileName, ".")[0];
+        asmFile << vm_init(singleFile) << endl;
+        processFile(inputPath, asmFile);
+    }
+
     asmFile.close();
-    vmFile.close();
     return 0;
 }

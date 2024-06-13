@@ -15,7 +15,6 @@ A=M
 M=D
 @SP
 M=M+1
-
 // Pop local 0
 @0
 D=A
@@ -29,7 +28,6 @@ D=M
 @R13
 A=M
 M=D
-
 (LOOP)
 // Push argument 0
 @0
@@ -42,7 +40,6 @@ A=M
 M=D
 @SP
 M=M+1
-
 // Push local 0
 @0
 D=A
@@ -54,7 +51,6 @@ A=M
 M=D
 @SP
 M=M+1
-
 // add Op
 @SP
 AM=M-1
@@ -62,7 +58,6 @@ D=M
 @SP
 A=M-1
 M=M+D
-
 // Pop local 0
 @0
 D=A
@@ -76,7 +71,6 @@ D=M
 @R13
 A=M
 M=D
-
 // Push argument 0
 @0
 D=A
@@ -88,7 +82,6 @@ A=M
 M=D
 @SP
 M=M+1
-
 // Push constant 1
 @1
 D=A
@@ -97,7 +90,6 @@ A=M
 M=D
 @SP
 M=M+1
-
 // sub Op
 @SP
 AM=M-1
@@ -105,7 +97,6 @@ D=M
 @SP
 A=M-1
 M=M-D
-
 // Pop argument 0
 @0
 D=A
@@ -119,7 +110,6 @@ D=M
 @R13
 A=M
 M=D
-
 // Push argument 0
 @0
 D=A
@@ -131,7 +121,6 @@ A=M
 M=D
 @SP
 M=M+1
-
 // if-goto LOOP
 @SP
 AM=M-1
@@ -149,8 +138,3 @@ A=M
 M=D
 @SP
 M=M+1
-
-// End of program
-(END)
-@END
-0;JMP

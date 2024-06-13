@@ -15,7 +15,6 @@ A=M
 M=D
 @SP
 M=M+1
-
 // Push constant 8
 @8
 D=A
@@ -24,16 +23,10 @@ A=M
 M=D
 @SP
 M=M+1
-
-// Add Op
+// add Op
 @SP
 AM=M-1
 D=M
 @SP
 A=M-1
 M=M+D
-
-// End of program
-(END)
-@END
-0;JMP
